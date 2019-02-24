@@ -1,17 +1,18 @@
 import collections
+import deepqnetwork
 import gym
 import random
-import tensorflow as tf
 
 # hyperParams
 minibatchSize = 32
 replayMemorySize = 100000 #million in experience replay paper
 
-# data
+# runtime vars
+env = gym.make('Pong-v0')
 replayMemory = collections.deque([], replayMemorySize) #dequeue has O(n/64) access, should be list, but this handles dropping old elements for free
+net = deepqnetwork.DeepQNetwork(env.action_space.n)
 
 # simulate games
-env = gym.make('Pong-v0')
 observation = env.reset()
 for _ in range(10000):
     # pick an action
