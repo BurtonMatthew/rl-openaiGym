@@ -39,7 +39,7 @@ frameStack = initEpisode(env, frameStackSize, noopAction)
 
 for _ in range(10):
     # pick an action
-    qNetwork.apply(frameStack)
+    print(qNetwork.predict(frameStack))
     action = env.action_space.sample()
     # simulate step, record history
     observation, reward, done, info = env.step(action)
