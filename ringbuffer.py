@@ -6,7 +6,7 @@ class RingBuffer:
         self.maxlen = maxlen
         self.start = 0
         self.length = 0
-        self.data = [None for _ in range(maxlen)]
+        self.data = numpy.empty(maxlen, dtype=numpy.object)#[None for _ in range(maxlen)]
 
     def __len__(self):
         return self.length
@@ -30,6 +30,6 @@ class RingBuffer:
 
     def sample(self, batchSize):
         batch = []
-        for num in numpy.random.random_integers(0, self.length-1, batchSize):
+        for num in numpy.random.randint(0, self.length, batchSize):
             batch.append(self[num])
         return batch
