@@ -36,8 +36,8 @@ class DeepQNetwork:
 
             #training
             actions_onehot = tf.one_hot(self.selectedActions, numOutputs, dtype=tf.float32)
-            q = tf.reduce_sum(tf.multiply(self.outputs, actions_onehot), axis=1)
-            loss = tf.clip_by_value(tf.reduce_mean(tf.square(self.qys - q)), -1, 1)
+            qs = tf.reduce_sum(tf.multiply(self.outputs, actions_onehot), axis=1)
+            loss = tf.reduce_mean(tf.square(tf.clip_by_value(self.qys - qs, -1, 1)))
             self.trainFn = tf.train.RMSPropOptimizer(learning_rate=0.00025, momentum=0.95).minimize(loss)
 
     def predict(self, session, frameStack):
