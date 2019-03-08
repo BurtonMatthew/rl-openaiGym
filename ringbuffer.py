@@ -6,7 +6,7 @@ class RingBuffer:
         self.maxlen = maxlen
         self.start = 0
         self.length = 0
-        self.data = numpy.empty(maxlen, dtype=numpy.object)#[None for _ in range(maxlen)]
+        self.data = numpy.empty(maxlen, dtype=numpy.object)
 
     def __len__(self):
         return self.length
