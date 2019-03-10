@@ -6,11 +6,8 @@ class ProcessedObservation(metaclass=ABCMeta):
 
 class Model(metaclass=ABCMeta):
     @abstractmethod
-    def getLoss(self):
-        pass
-    @abstractmethod
     def predict(self, session, obs : ProcessedObservation):
         pass
     @abstractmethod
-    def buidTrainFeedDict(self, session, obs : [ProcessedObservation]):
+    def train(self, session, obs : [ProcessedObservation]):
         pass
