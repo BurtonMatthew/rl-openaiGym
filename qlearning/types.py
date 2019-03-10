@@ -1,13 +1,19 @@
 from abc import ABCMeta, abstractmethod
 from typing import NewType
 
-class ProcessedObservation(metaclass=ABCMeta):
-    pass
-
 class Model(metaclass=ABCMeta):
     @abstractmethod
-    def predict(self, session, obs : ProcessedObservation):
+    def getInputs(self):
         pass
     @abstractmethod
-    def train(self, session, obs : [ProcessedObservation]):
+    def getOutputs(self):
+        pass
+    @abstractmethod
+    def getActions(self):
+        pass
+    @abstractmethod
+    def getYs(self):
+        pass
+    @abstractmethod
+    def getTrain(self):
         pass

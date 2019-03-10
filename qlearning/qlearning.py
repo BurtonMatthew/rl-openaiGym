@@ -49,7 +49,7 @@ def QLearn(   env : gym.Env
                 if np.random.ranf() < epsilons[min(frame, explorationSteps-1)]:
                     action = env.action_space.sample()
                 else:
-                    action = np.argmax(model.predict(session, prevObservation))
+                    action = np.argmax(_predict(session, model, prevObservation))
 
                 # step
                 observation, reward, episodeDone, info = env.step(action)
@@ -58,6 +58,31 @@ def QLearn(   env : gym.Env
                 totalReward += reward
 
                 if frame > learningStart and frame % learningFrequency == 0:
-                    model.train(session, memory.sample(learningBatchSize))
+                    _train(session, model, memory.sample(learningBatchSize))
 
                 #env.render()
+
+def _predict(session, model, obs):
+    return session.run(model.getOutputs(), feed_dict = { model.getInputs(): np.expand_dims(obs, axis=0) })
+
+def _train(session, model, memories):
+    xs = []
+    ys = []
+    for xObs, _, _, _, yObs in memories:
+        xs.append(xObs)
+        ys.append(yObs)
+
+    yPredicts = session.run(model.getOutputs(), feed_dict = { model.getInputs(): np.stack(ys) })
+
+    idx = 0
+    qys = []
+    actions = []
+    for _, action, reward, done, _ in memories:
+        if done:
+            qys.append(reward)
+        else:
+            qys.append(reward + .99 * max(yPredicts[idx]))
+        actions.append(action)
+        idx += 1
+
+    session.run([model.getTrain()], feed_dict = {model.getInputs(): np.stack(xs), model.getYs(): np.stack(qys), model.getActions(): np.stack(actions)})

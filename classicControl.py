@@ -19,31 +19,16 @@ class Model(qltypes.Model):
         qs = tf.reduce_sum(tf.multiply(self.outputs, actions_onehot), axis=1)
         loss = tf.reduce_mean(tf.square(self.qys - qs))
         self.trainFn = optimizer.minimize(loss)
-
-    def predict(self, session, obs):
-        return session.run(self.outputs, feed_dict = { self.inputs: np.expand_dims(obs, axis=0) })
-
-    def train(self, session, memories):
-        xs = []
-        ys = []
-        for xObs, _, _, _, yObs in memories:
-            xs.append(xObs)
-            ys.append(yObs)
-
-        yPredicts = session.run(self.outputs, feed_dict = { self.inputs: np.stack(ys) })
-
-        idx = 0
-        qys = []
-        actions = []
-        for _, action, reward, done, _ in memories:
-            if done:
-                qys.append(reward)
-            else:
-                qys.append(reward + .99 * max(yPredicts[idx]))
-            actions.append(action)
-            idx += 1
-
-        session.run([self.trainFn], feed_dict = {self.inputs: np.stack(xs), self.qys: np.stack(qys), self.selectedActions: np.stack(actions)})
+    def getInputs(self):
+        return self.inputs
+    def getOutputs(self):
+        return self.outputs
+    def getActions(self):
+        return self.selectedActions
+    def getYs(self):
+        return self.qys
+    def getTrain(self):
+        return self.trainFn
 
 if len(sys.argv) == 1:
     game = "CartPole-v1"
