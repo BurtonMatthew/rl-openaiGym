@@ -32,13 +32,13 @@ class Model(qltypes.Model):
 
 if len(sys.argv) == 1:
     game = "CartPole-v1"
-elif sys.argv[1].tolower() == "cartpole":
+elif sys.argv[1].lower() == "cartpole":
     game = "CartPole-v1"
-elif sys.argv[1].tolower() == "mountaincar":
+elif sys.argv[1].lower() == "mountaincar":
     game = "MountainCar-v0"
-elif sys.argv[1].tolower() == "acrobat":
+elif sys.argv[1].lower() == "acrobat":
     game = "Acrobot-v1"
-elif sys.argv[1].tolower() == "pendulum":
+elif sys.argv[1].lower() == "pendulum":
     game = "Pendulum-v0"
 else:
     game = "CartPole-v1"
