@@ -17,3 +17,16 @@ class Model(metaclass=ABCMeta):
     @abstractmethod
     def getTrain(self):
         pass
+
+class ObservationPreProcessor(metaclass=ABCMeta):
+    @abstractmethod
+    def resetEnv(self):
+        pass
+    @abstractmethod
+    def process(self, observation):
+        pass
+
+class ObservationPreFeedProcessor(metaclass=ABCMeta):
+    @abstractmethod
+    def process(self, preProcessedObservation):
+        pass
