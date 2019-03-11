@@ -47,6 +47,7 @@ def QLearn(   env : gym.Env
                 prevObservation = observationPreProcessor.process(env.reset())
             action = env.action_space.sample()
             observation, reward, episodeDone, info = env.step(action)
+            observation = observationPreProcessor.process(observation)
             memory.append((prevObservation, action, np.sign(reward), episodeDone, observation))
             prevObservation = observation
 
@@ -86,6 +87,7 @@ def QLearn(   env : gym.Env
                     prevObservation = observationPreProcessor.process(env.reset())
                 action = np.argmax(_predict(session, model, observationPreFeedProcessor, prevObservation))
                 observation, reward, episodeDone, info = env.step(action)
+                observation = observationPreProcessor.process(observation)
                 prevObservation = observation
                 env.render()
 
