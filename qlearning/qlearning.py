@@ -1,3 +1,4 @@
+import collections
 import gym
 import numpy as np
 import tensorflow as tf
@@ -14,8 +15,11 @@ class _PassThroughFeedProcessor(qltypes.ObservationPreFeedProcessor):
     def process(self, preProcessedObservation):
         return preProcessedObservation
 
+MainNetVariableScope = "main"
+TargetNetVariableScope = "target"
+
 def QLearn(   env : gym.Env
-            , model : qltypes.Model
+            , mainNet : qltypes.Model
             , initExperienceFrames : int
             , trainingFrames : int
             , replayMemorySize : int
@@ -26,18 +30,27 @@ def QLearn(   env : gym.Env
             , learningFrequency : int
             , learningBatchSize : int
             , observationPreProcessor : qltypes.ObservationPreProcessor = _PassThroughPreProcessor() 
-            , observationPreFeedProcessor : qltypes.ObservationPreFeedProcessor = _PassThroughFeedProcessor()):
+            , observationPreFeedProcessor : qltypes.ObservationPreFeedProcessor = _PassThroughFeedProcessor()
+            , targetNet : qltypes.Model = None
+            , targetNetUpdateFrequency : int = 10000):
         if not isinstance(env, gym.Env):
-            raise RuntimeError()
-        if not isinstance(model, qltypes.Model):
-            raise RuntimeError()
+            raise RuntimeError("Environment must be an OpenAI Gym Environment")
+        if not isinstance(mainNet, qltypes.Model):
+            raise RuntimeError("Main net must be a qltypes model")
         if not isinstance(observationPreProcessor, qltypes.ObservationPreProcessor):
-            raise RuntimeError()
+            raise RuntimeError("ObservationPreProcessor must be a qltypes preprocessor")
         if not isinstance(observationPreFeedProcessor, qltypes.ObservationPreFeedProcessor):
-            raise RuntimeError()
+            raise RuntimeError("ObservationPreFeedProcessor must be a qltypes preprocessor")
+        if targetNet != None:
+            if type(mainNet) != type(targetNet):
+                raise RuntimeError("Main and target nets must be the same class")
+            UseTargetNetwork = True
+        else:
+            UseTargetNetwork = False
 
         epsilons = np.linspace(initExploration, finalExploration, explorationSteps)
         memory = RingBuffer(replayMemorySize)
+        rewardHistory = collections.deque([], maxlen=100)
 
         # run inital experience
         episodeDone = True
@@ -54,12 +67,22 @@ def QLearn(   env : gym.Env
         # train
         with tf.Session() as session:
             session.run(tf.global_variables_initializer())
-            episodeDone = True
+            # counters
             totalReward = 0
+            episodeCount = 0
+            learnSteps = 0
+            episodeDone = False
+
+            #init starting state
+            observationPreProcessor.resetEnv()
+            prevObservation = observationPreProcessor.process(env.reset())
             for frame in range(trainingFrames):
                 # reset the environment if we finished an episode
                 if episodeDone:
-                    print("Frame: " + str(frame) + " Score: " + str(totalReward))
+                    episodeCount += 1
+                    rewardHistory.append(totalReward)
+                    if episodeCount % 10 == 0:
+                        print("Episode: " + str(episodeCount) + " Frame: " + str(frame) + " ScoreAvg: " + str(np.mean(rewardHistory)))
                     totalReward = 0
                     observationPreProcessor.resetEnv()
                     prevObservation = observationPreProcessor.process(env.reset())
@@ -68,7 +91,7 @@ def QLearn(   env : gym.Env
                 if np.random.ranf() < epsilons[min(frame, explorationSteps-1)]:
                     action = env.action_space.sample()
                 else:
-                    action = np.argmax(_predict(session, model, observationPreFeedProcessor, prevObservation))
+                    action = np.argmax(_predict(session, targetNet if UseTargetNetwork else mainNet, observationPreFeedProcessor, prevObservation))
 
                 # step
                 observation, reward, episodeDone, info = env.step(action)
@@ -78,14 +101,17 @@ def QLearn(   env : gym.Env
                 totalReward += reward
 
                 if frame > learningStart and frame % learningFrequency == 0:
-                    _train(session, model, observationPreFeedProcessor, memory.sample(learningBatchSize))
+                    _train(session, mainNet, observationPreFeedProcessor, memory.sample(learningBatchSize))
+                    learnSteps += 1
+                    if UseTargetNetwork and learnSteps % targetNetUpdateFrequency == 0:
+                        _updateTargetNet(session)
 
             episodeDone = True
             while True:
                 if episodeDone:
                     observationPreProcessor.resetEnv()
                     prevObservation = observationPreProcessor.process(env.reset())
-                action = np.argmax(_predict(session, model, observationPreFeedProcessor, prevObservation))
+                action = np.argmax(_predict(session, mainNet, observationPreFeedProcessor, prevObservation))
                 observation, reward, episodeDone, info = env.step(action)
                 observation = observationPreProcessor.process(observation)
                 prevObservation = observation
@@ -115,3 +141,7 @@ def _train(session, model, proc, memories):
         idx += 1
 
     session.run([model.getTrain()], feed_dict = {model.getInputs(): np.stack(xs), model.getYs(): np.stack(qys), model.getActions(): np.stack(actions)})
+
+def _updateTargetNet(session):
+    update_weights = [tf.assign(new, old) for (new, old) in zip(tf.trainable_variables(TargetNetVariableScope), tf.trainable_variables(MainNetVariableScope))]
+    session.run(update_weights)

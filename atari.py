@@ -1,7 +1,7 @@
 import collections
 import gym
 import numpy as np
-from qlearning.qlearning import QLearn
+from qlearning.qlearning import QLearn, MainNetVariableScope, TargetNetVariableScope
 import qlearning.types as qltypes
 import tensorflow as tf
 import sys
@@ -86,17 +86,18 @@ class FrameStacker(qltypes.ObservationPreFeedProcessor):
 
 stackSize = 4
 env = gym.make("PongDeterministic-v4")
-with tf.variable_scope("eval"):
-    model = Model(stackSize
+with tf.variable_scope(MainNetVariableScope):
+    mainNet = Model(stackSize
         , env.action_space.n
         , tf.train.AdamOptimizer(learning_rate=0.0000625, epsilon=0.00015))
-with tf.variable_scope("learn"):
-    learnModel = Model(stackSize
+with tf.variable_scope(TargetNetVariableScope):
+    targetNet = Model(stackSize
         , env.action_space.n
         , tf.train.AdamOptimizer(learning_rate=0.0000625, epsilon=0.00015))
 
 QLearn(env = env
-    , model = model
+    , mainNet = mainNet
+    , targetNet = targetNet
     , initExperienceFrames = 50000
     , trainingFrames = 2000000
     , replayMemorySize = 800000
