@@ -44,7 +44,8 @@ class Model(qltypes.Model):
         #training
         actions_onehot = tf.one_hot(self.selectedActions, numOutputs, dtype=tf.float32)
         qs = tf.reduce_sum(tf.multiply(self.outputs, actions_onehot), axis=1)
-        loss = tf.reduce_mean(self.qys - qs)
+        #loss = tf.reduce_mean(self.qys - qs)
+        loss = tf.reduce_mean(tf.losses.huber_loss(labels=self.qys, predictions=qs))
         self.trainFn = optimizer.minimize(loss)
 
     def getInputs(self):
@@ -99,7 +100,7 @@ QLearn(env = env
     , mainNet = mainNet
     , targetNet = targetNet
     , initExperienceFrames = 50000
-    , trainingFrames = 2000000
+    , trainingFrames = 10000000
     , replayMemorySize = 800000
     , initExploration = 1.0
     , finalExploration = 0.01
