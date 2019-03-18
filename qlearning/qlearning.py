@@ -63,6 +63,7 @@ def QLearn(   env : gym.Env
         # train
         with tf.Session() as session:
             session.run(tf.global_variables_initializer())
+            _updateTargetNet(session)
             # counters
             totalReward = 0
             episodeCount = 0
