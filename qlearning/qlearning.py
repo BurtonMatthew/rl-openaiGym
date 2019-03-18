@@ -88,7 +88,7 @@ def QLearn(   env : gym.Env
                 if np.random.ranf() < epsilons[min(frame, explorationSteps-1)]:
                     action = env.action_space.sample()
                 else:
-                    action = np.argmax(_predict(session, targetNet, observationPreFeedProcessor, prevObservation))
+                    action = np.argmax(_predict(session, mainNet, observationPreFeedProcessor, prevObservation))
 
                 # step
                 observation, reward, episodeDone, info = env.step(action)
