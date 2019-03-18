@@ -123,7 +123,10 @@ def _train(session, mainNet, targetNet, proc, memories):
         xs.append(proc.process(xObs))
         ys.append(proc.process(yObs))
 
-    yPredicts = session.run(targetNet.getOutputs(), feed_dict = { targetNet.getInputs(): np.stack(ys) })
+    # main network estimates best actions
+    bestActions = np.argmax(session.run(mainNet.getOutputs(), feed_dict = { mainNet.getInputs(): np.stack(ys) }), axis=1)
+    # target network estimates values
+    estVals = session.run(targetNet.getOutputs(), feed_dict = { targetNet.getInputs(): np.stack(ys) })
 
     idx = 0
     qys = []
@@ -132,7 +135,7 @@ def _train(session, mainNet, targetNet, proc, memories):
         if done:
             qys.append(reward)
         else:
-            qys.append(reward + .99 * max(yPredicts[idx]))
+            qys.append(reward + .99 * estVals[idx][bestActions[idx]])
         actions.append(action)
         idx += 1
 
