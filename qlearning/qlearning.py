@@ -20,6 +20,7 @@ TargetNetVariableScope = "target"
 
 def QLearn(   env : gym.Env
             , mainNet : qltypes.Model
+            , targetNet : qltypes.Model
             , initExperienceFrames : int
             , trainingFrames : int
             , replayMemorySize : int
@@ -31,7 +32,6 @@ def QLearn(   env : gym.Env
             , learningBatchSize : int
             , observationPreProcessor : qltypes.ObservationPreProcessor = _PassThroughPreProcessor() 
             , observationPreFeedProcessor : qltypes.ObservationPreFeedProcessor = _PassThroughFeedProcessor()
-            , targetNet : qltypes.Model = None
             , targetNetUpdateFrequency : int = 10000):
         if not isinstance(env, gym.Env):
             raise RuntimeError("Environment must be an OpenAI Gym Environment")
@@ -41,12 +41,8 @@ def QLearn(   env : gym.Env
             raise RuntimeError("ObservationPreProcessor must be a qltypes preprocessor")
         if not isinstance(observationPreFeedProcessor, qltypes.ObservationPreFeedProcessor):
             raise RuntimeError("ObservationPreFeedProcessor must be a qltypes preprocessor")
-        if targetNet != None:
-            if type(mainNet) != type(targetNet):
-                raise RuntimeError("Main and target nets must be the same class")
-            UseTargetNetwork = True
-        else:
-            UseTargetNetwork = False
+        if type(mainNet) != type(targetNet):
+            raise RuntimeError("Main and target nets must be the same class")
 
         epsilons = np.linspace(initExploration, finalExploration, explorationSteps)
         memory = RingBuffer(replayMemorySize)
@@ -91,7 +87,7 @@ def QLearn(   env : gym.Env
                 if np.random.ranf() < epsilons[min(frame, explorationSteps-1)]:
                     action = env.action_space.sample()
                 else:
-                    action = np.argmax(_predict(session, targetNet if UseTargetNetwork else mainNet, observationPreFeedProcessor, prevObservation))
+                    action = np.argmax(_predict(session, targetNet, observationPreFeedProcessor, prevObservation))
 
                 # step
                 observation, reward, episodeDone, info = env.step(action)
@@ -101,9 +97,9 @@ def QLearn(   env : gym.Env
                 totalReward += reward
 
                 if frame > learningStart and frame % learningFrequency == 0:
-                    _train(session, mainNet, observationPreFeedProcessor, memory.sample(learningBatchSize))
+                    _train(session, mainNet, targetNet, observationPreFeedProcessor, memory.sample(learningBatchSize))
                     learnSteps += 1
-                    if UseTargetNetwork and learnSteps % targetNetUpdateFrequency == 0:
+                    if learnSteps % targetNetUpdateFrequency == 0:
                         _updateTargetNet(session)
 
             episodeDone = True
@@ -120,14 +116,14 @@ def QLearn(   env : gym.Env
 def _predict(session, model, proc, obs):
     return session.run(model.getOutputs(), feed_dict = { model.getInputs(): np.expand_dims(proc.process(obs), axis=0) })
 
-def _train(session, model, proc, memories):
+def _train(session, mainNet, targetNet, proc, memories):
     xs = []
     ys = []
     for xObs, _, _, _, yObs in memories:
         xs.append(proc.process(xObs))
         ys.append(proc.process(yObs))
 
-    yPredicts = session.run(model.getOutputs(), feed_dict = { model.getInputs(): np.stack(ys) })
+    yPredicts = session.run(targetNet.getOutputs(), feed_dict = { targetNet.getInputs(): np.stack(ys) })
 
     idx = 0
     qys = []
@@ -140,7 +136,7 @@ def _train(session, model, proc, memories):
         actions.append(action)
         idx += 1
 
-    session.run([model.getTrain()], feed_dict = {model.getInputs(): np.stack(xs), model.getYs(): np.stack(qys), model.getActions(): np.stack(actions)})
+    session.run([mainNet.getTrain()], feed_dict = {mainNet.getInputs(): np.stack(xs), mainNet.getYs(): np.stack(qys), mainNet.getActions(): np.stack(actions)})
 
 def _updateTargetNet(session):
     update_weights = [tf.assign(new, old) for (new, old) in zip(tf.trainable_variables(TargetNetVariableScope), tf.trainable_variables(MainNetVariableScope))]
