@@ -1,3 +1,4 @@
+import argparse
 import collections
 import gym
 import numpy as np
@@ -83,10 +84,12 @@ class FrameStacker(qltypes.ObservationPreFeedProcessor):
     def process(self, preProcessedObservation):
         return np.stack(preProcessedObservation, axis=2)
 
-
+parser = argparse.ArgumentParser()
+parser.add_argument('--env', type=str, default='PongDeterministic-v4', help='Define Environment')
+args = parser.parse_args()
 
 stackSize = 4
-env = gym.make("PongDeterministic-v4")
+env = gym.make(args.env)
 with tf.variable_scope(MainNetVariableScope):
     mainNet = Model(stackSize
         , env.action_space.n
