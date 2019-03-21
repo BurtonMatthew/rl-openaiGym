@@ -6,6 +6,10 @@ from qlearning.qlearning import QLearn, MainNetVariableScope, TargetNetVariableS
 import qlearning.types as qltypes
 import tensorflow as tf
 import sys
+try:
+    import gym_tetris
+except:
+    pass
 
 from skimage import img_as_ubyte, io
 from skimage.transform import resize
