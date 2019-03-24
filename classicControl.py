@@ -17,7 +17,7 @@ class Model(qltypes.Model):
         #training
         actions_onehot = tf.one_hot(self.selectedActions, numOutputs, dtype=tf.float32)
         qs = tf.reduce_sum(tf.multiply(self.outputs, actions_onehot), axis=1)
-        loss = tf.reduce_mean(tf.square(self.qys - qs))
+        loss = tf.reduce_mean(tf.losses.huber_loss(labels=self.qys, predictions=qs))
         self.trainFn = optimizer.minimize(loss)
     def getInputs(self):
         return self.inputs
