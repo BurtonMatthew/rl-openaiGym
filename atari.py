@@ -89,6 +89,7 @@ class FrameStacker(qltypes.ObservationPreFeedProcessor):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='PongDeterministic-v4', help='Define Environment')
+parser.add_argument('--saveDir', type=str, default="", help="Path to save checkpoints to")
 args = parser.parse_args()
 
 stackSize = 4
@@ -115,4 +116,5 @@ QLearn(env = env
     , learningFrequency = 4
     , learningBatchSize = 32
     , observationPreProcessor = FrameProcessor(stackSize)
-    , observationPreFeedProcessor = FrameStacker())
+    , observationPreFeedProcessor = FrameStacker()
+    , savePath=args.saveDir)

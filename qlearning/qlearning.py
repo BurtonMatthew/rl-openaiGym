@@ -32,7 +32,9 @@ def QLearn(   env : gym.Env
             , learningBatchSize : int
             , observationPreProcessor : qltypes.ObservationPreProcessor = _PassThroughPreProcessor() 
             , observationPreFeedProcessor : qltypes.ObservationPreFeedProcessor = _PassThroughFeedProcessor()
-            , targetNetUpdateFrequency : int = 10000):
+            , targetNetUpdateFrequency : int = 10000
+            , savePath = ""
+            , saveFrequencyEpisodes = 20):
         if not isinstance(env, gym.Env):
             raise RuntimeError("Environment must be an OpenAI Gym Environment")
         if not isinstance(mainNet, qltypes.Model):
@@ -47,6 +49,7 @@ def QLearn(   env : gym.Env
         epsilons = np.linspace(initExploration, finalExploration, explorationSteps)
         memory = RingBuffer(replayMemorySize)
         rewardHistory = collections.deque([], maxlen=100)
+        saver = tf.train.Saver()
 
         # run inital experience
         episodeDone = True
@@ -80,6 +83,8 @@ def QLearn(   env : gym.Env
                     rewardHistory.append(totalReward)
                     if episodeCount % 10 == 0:
                         print("Episode: " + str(episodeCount) + " Frame: " + str(frame) + " ScoreAvg: " + str(np.mean(rewardHistory)))
+                    if savePath != "" and episodeCount % 20 == 0:
+                        saver.save(session, savePath, global_step=frame)
                     totalReward = 0
                     observationPreProcessor.resetEnv()
                     prevObservation = observationPreProcessor.process(env.reset())

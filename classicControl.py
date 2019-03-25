@@ -1,3 +1,4 @@
+import argparse
 import gym
 import numpy as np
 from qlearning.qlearning import QLearn, MainNetVariableScope, TargetNetVariableScope
@@ -30,39 +31,32 @@ class Model(qltypes.Model):
     def getTrain(self):
         return self.trainFn
 
-if len(sys.argv) == 1:
-    game = "CartPole-v1"
-elif sys.argv[1].lower() == "cartpole":
-    game = "CartPole-v1"
-elif sys.argv[1].lower() == "mountaincar":
-    game = "MountainCar-v0"
-elif sys.argv[1].lower() == "acrobot":
-    game = "Acrobot-v1"
-elif sys.argv[1].lower() == "pendulum":
-    game = "Pendulum-v0"
-else:
-    game = "CartPole-v1"
+parser = argparse.ArgumentParser()
+parser.add_argument('--env', type=str, default='CartPole-v1', help='Define Environment')
+parser.add_argument('--saveDir', type=str, default="", help="Path to save checkpoints to")
+args = parser.parse_args()
 
-env = gym.make(game)
+env = gym.make(args.env)
 with tf.variable_scope(MainNetVariableScope):
     model = Model(env.observation_space.shape[0]
         , env.action_space.n
-        , tf.contrib.estimator.clip_gradients_by_norm(tf.train.AdamOptimizer(learning_rate=0.0000625, epsilon=0.00015), 1.0))
+        , tf.train.AdamOptimizer(learning_rate=0.0000625, epsilon=0.00015))
 with tf.variable_scope(TargetNetVariableScope):
     target = Model(env.observation_space.shape[0]
         , env.action_space.n
-        , tf.contrib.estimator.clip_gradients_by_norm(tf.train.AdamOptimizer(learning_rate=0.0000625, epsilon=0.00015), 1.0))
+        , tf.train.AdamOptimizer(learning_rate=0.0000625, epsilon=0.00015))
 
 QLearn(env = env
     , mainNet = model
     , targetNet = target
     , targetNetUpdateFrequency = 1000
-    , initExperienceFrames = 50000
+    , initExperienceFrames = 20000
     , trainingFrames = 1000000
     , replayMemorySize = 1000000
     , initExploration = 1.0
-    , finalExploration = 0.1
+    , finalExploration = 0.01
     , explorationSteps = 100000
     , learningStart = 10000
     , learningFrequency = 4
-    , learningBatchSize = 32)
+    , learningBatchSize = 32
+    , savePath=args.saveDir)
