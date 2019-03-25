@@ -1,5 +1,6 @@
 import argparse
 import collections
+import common.wrappers
 import gym
 import numpy as np
 from qlearning.qlearning import QLearn, MainNetVariableScope, TargetNetVariableScope
@@ -72,11 +73,10 @@ class FrameProcessor(qltypes.ObservationPreProcessor):
         self.newEpisode = True
 
     def process(self, observation):
-        image = img_as_ubyte(resize(rgb2gray(observation), output_shape=(84, 84), mode='constant'))
-        self.frameStack.append(image)
+        self.frameStack.append(observation)
         if self.newEpisode:
             for _ in range(self.frameStack.maxlen):
-                self.frameStack.append(image)
+                self.frameStack.append(observation)
             self.newEpisode = False
         return self.frameStack.copy()
 
@@ -94,6 +94,8 @@ args = parser.parse_args()
 
 stackSize = 4
 env = gym.make(args.env)
+env = common.wrappers.ResizeFrame(env, 84, 84)
+
 with tf.variable_scope(MainNetVariableScope):
     mainNet = Model(stackSize
         , env.action_space.n

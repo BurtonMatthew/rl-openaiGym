@@ -34,7 +34,8 @@ def QLearn(   env : gym.Env
             , observationPreFeedProcessor : qltypes.ObservationPreFeedProcessor = _PassThroughFeedProcessor()
             , targetNetUpdateFrequency : int = 10000
             , savePath = ""
-            , saveFrequencyEpisodes = 20):
+            , saveFrequencyEpisodes = 200
+            , restoreFromSave = False):
         if not isinstance(env, gym.Env):
             raise RuntimeError("Environment must be an OpenAI Gym Environment")
         if not isinstance(mainNet, qltypes.Model):
@@ -65,7 +66,10 @@ def QLearn(   env : gym.Env
 
         # train
         with tf.Session() as session:
-            session.run(tf.global_variables_initializer())
+            if restoreFromSave and savePath != "":
+                saver.restore(sess=session, save_path=savePath)
+            else:
+                session.run(tf.global_variables_initializer())
             _updateTargetNet(session)
             # counters
             totalReward = 0
