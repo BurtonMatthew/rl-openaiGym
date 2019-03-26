@@ -68,8 +68,10 @@ def QLearn(   env : gym.Env
         with tf.Session() as session:
             if restorePath != "":
                 saver.restore(sess=session, save_path=restorePath)
+                frameStart = int(''.join(list(filter(str.isdigit, restorePath))))
             else:
                 session.run(tf.global_variables_initializer())
+                frameStart = 0
             _updateTargetNet(session)
             # counters
             totalReward = 0
@@ -80,7 +82,7 @@ def QLearn(   env : gym.Env
             #init starting state
             observationPreProcessor.resetEnv()
             prevObservation = observationPreProcessor.process(env.reset())
-            for frame in range(trainingFrames):
+            for frame in range(frameStart, trainingFrames):
                 # reset the environment if we finished an episode
                 if episodeDone:
                     episodeCount += 1
