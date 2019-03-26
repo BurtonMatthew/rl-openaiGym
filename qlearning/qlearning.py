@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import qlearning.types as qltypes
 from qlearning.ringbuffer import RingBuffer
+import time
 
 class _PassThroughPreProcessor(qltypes.ObservationPreProcessor):
     def resetEnv(self):
@@ -33,9 +34,9 @@ def QLearn(   env : gym.Env
             , observationPreProcessor : qltypes.ObservationPreProcessor = _PassThroughPreProcessor() 
             , observationPreFeedProcessor : qltypes.ObservationPreFeedProcessor = _PassThroughFeedProcessor()
             , targetNetUpdateFrequency : int = 10000
-            , savePath = ""
-            , saveFrequencyEpisodes = 200
-            , restorePath = ""):
+            , savePath : str = ""
+            , saveFrequencyEpisodes : int = 200 
+            , restorePath : str = ""):
         if not isinstance(env, gym.Env):
             raise RuntimeError("Environment must be an OpenAI Gym Environment")
         if not isinstance(mainNet, qltypes.Model):
@@ -89,7 +90,7 @@ def QLearn(   env : gym.Env
                     rewardHistory.append(totalReward)
                     if episodeCount % 10 == 0:
                         print("Episode: " + str(episodeCount) + " Frame: " + str(frame) + " ScoreAvg: " + str(np.mean(rewardHistory)))
-                    if savePath != "" and episodeCount % 20 == 0:
+                    if savePath != "" and episodeCount % saveFrequencyEpisodes == 0:
                         saver.save(session, savePath, global_step=frame)
                     totalReward = 0
                     observationPreProcessor.resetEnv()
@@ -113,17 +114,6 @@ def QLearn(   env : gym.Env
                     learnSteps += 1
                     if learnSteps % targetNetUpdateFrequency == 0:
                         _updateTargetNet(session)
-
-            episodeDone = True
-            while True:
-                if episodeDone:
-                    observationPreProcessor.resetEnv()
-                    prevObservation = observationPreProcessor.process(env.reset())
-                action = np.argmax(_predict(session, mainNet, observationPreFeedProcessor, prevObservation))
-                observation, reward, episodeDone, info = env.step(action)
-                observation = observationPreProcessor.process(observation)
-                prevObservation = observation
-                env.render()
 
 def _predict(session, model, proc, obs):
     return session.run(model.getOutputs(), feed_dict = { model.getInputs(): np.expand_dims(proc.process(obs), axis=0) })
@@ -156,3 +146,24 @@ def _train(session, mainNet, targetNet, proc, memories):
 def _updateTargetNet(session):
     update_weights = [tf.assign(new, old) for (new, old) in zip(tf.trainable_variables(TargetNetVariableScope), tf.trainable_variables(MainNetVariableScope))]
     session.run(update_weights)
+
+def Playback(env : gym.Env
+            , mainNet : qltypes.Model
+            , restorePath : str
+            , observationPreProcessor : qltypes.ObservationPreProcessor = _PassThroughPreProcessor() 
+            , observationPreFeedProcessor : qltypes.ObservationPreFeedProcessor = _PassThroughFeedProcessor()
+            , fps : float = 30):
+    episodeDone = True
+    saver = tf.train.Saver()
+    with tf.Session() as session:
+        saver.restore(sess=session, save_path=restorePath)
+        while True:
+            if episodeDone:
+                observationPreProcessor.resetEnv()
+                prevObservation = observationPreProcessor.process(env.reset())
+            action = np.argmax(_predict(session, mainNet, observationPreFeedProcessor, prevObservation))
+            observation, reward, episodeDone, info = env.step(action)
+            observation = observationPreProcessor.process(observation)
+            prevObservation = observation
+            env.render()
+            time.sleep(1/fps)

@@ -3,7 +3,7 @@ import collections
 import common.wrappers
 import gym
 import numpy as np
-from qlearning.qlearning import QLearn, MainNetVariableScope, TargetNetVariableScope
+from qlearning.qlearning import QLearn, MainNetVariableScope, TargetNetVariableScope, Playback
 import qlearning.types as qltypes
 import tensorflow as tf
 import sys
@@ -91,6 +91,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='PongDeterministic-v4', help='Define Environment')
 parser.add_argument('--saveDir', type=str, default="", help="Path to save checkpoints to")
 parser.add_argument('--restorePath', type=str, default="", help="Restore a saved checkpoints to begin training from" )
+parser.add_argument('--playback', action='store_true', help="Plays back a restored policy, requires --restorePath")
 args = parser.parse_args()
 
 stackSize = 4
@@ -106,19 +107,27 @@ with tf.variable_scope(TargetNetVariableScope):
         , env.action_space.n
         , tf.train.AdamOptimizer(learning_rate=0.0000625, epsilon=0.00015))
 
-QLearn(env = env
-    , mainNet = mainNet
-    , targetNet = targetNet
-    , initExperienceFrames = 50000
-    , trainingFrames = 10000000
-    , replayMemorySize = 800000
-    , initExploration = 1.0
-    , finalExploration = 0.01
-    , explorationSteps = 1000000
-    , learningStart = 30000
-    , learningFrequency = 4
-    , learningBatchSize = 32
-    , observationPreProcessor = FrameProcessor(stackSize)
-    , observationPreFeedProcessor = FrameStacker()
-    , savePath = args.saveDir
-    , restorePath = args.restorePath)
+if not args.playback:
+    QLearn(env = env
+        , mainNet = mainNet
+        , targetNet = targetNet
+        , initExperienceFrames = 50000
+        , trainingFrames = 10000000
+        , replayMemorySize = 800000
+        , initExploration = 1.0
+        , finalExploration = 0.01
+        , explorationSteps = 1000000
+        , learningStart = 30000
+        , learningFrequency = 4
+        , learningBatchSize = 32
+        , observationPreProcessor = FrameProcessor(stackSize)
+        , observationPreFeedProcessor = FrameStacker()
+        , savePath = args.saveDir
+        , restorePath = args.restorePath)
+else:
+    Playback(env = env
+        , mainNet = mainNet
+        , restorePath = args.restorePath
+        , observationPreProcessor = FrameProcessor(stackSize)
+        , observationPreFeedProcessor = FrameStacker()
+        , fps = 30)
